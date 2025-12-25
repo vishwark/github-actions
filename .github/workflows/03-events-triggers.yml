@@ -1,0 +1,151 @@
+# GitHub Actions: Events and Triggers
+# This workflow demonstrates different event types and filtering options
+# Key concepts: push, pull_request, workflow_dispatch, schedules, filtering by branches/paths
+
+name: 03 - Events & Triggers
+
+# Multiple trigger events
+on:
+  # Trigger 1: Push event with branch filtering
+  push:
+    branches:
+      - main
+      - develop
+      - 'feature/**'  # Wildcard pattern
+    paths:
+      - 'src/**'      # Only trigger if files in src/ change
+      - 'package.json'
+      - '!docs/**'    # Don't trigger if only docs change
+      - '!**.md'      # Don't trigger if only markdown files change
+
+  # Trigger 2: Pull request event with filtering
+  pull_request:
+    branches: [main, develop]
+    types:
+      - opened
+      - synchronize
+      - reopened
+    paths:
+      - 'src/**'
+      - 'tests/**'
+
+  # Trigger 3: Manual trigger (workflow_dispatch)
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Environment to deploy to'
+        required: true
+        default: 'staging'
+        type: choice
+        options:
+          - staging
+          - production
+      debug:
+        description: 'Enable debug mode'
+        required: false
+        type: boolean
+
+  # Trigger 4: Scheduled trigger (cron)
+  schedule:
+    - cron: '0 2 * * *'      # Daily at 2 AM UTC
+    - cron: '0 0 * * 0'      # Weekly on Sunday at midnight
+
+  # Trigger 5: Repository dispatch (external trigger)
+  repository_dispatch:
+    types: [custom-event]
+
+  # Trigger 6: Workflow run (trigger on another workflow completion)
+  workflow_run:
+    workflows: ['01 - Core Concepts']
+    types: [completed]
+
+jobs:
+  # Job 1: Runs on push events
+  on-push:
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Print push event info
+        run: |
+          echo "Event: Push"
+          echo "Branch: ${{ github.ref }}"
+          echo "Commit: ${{ github.sha }}"
+          echo "Author: ${{ github.actor }}"
+
+  # Job 2: Runs on pull request events
+  on-pull-request:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Print PR event info
+        run: |
+          echo "Event: Pull Request"
+          echo "PR Number: ${{ github.event.pull_request.number }}"
+          echo "PR Title: ${{ github.event.pull_request.title }}"
+          echo "Base Branch: ${{ github.event.pull_request.base.ref }}"
+          echo "Head Branch: ${{ github.event.pull_request.head.ref }}"
+
+  # Job 3: Runs on manual trigger (workflow_dispatch)
+  on-manual-trigger:
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Print manual trigger info
+        run: |
+          echo "Event: Manual Trigger (workflow_dispatch)"
+          echo "Environment: ${{ github.event.inputs.environment }}"
+          echo "Debug Mode: ${{ github.event.inputs.debug }}"
+
+  # Job 4: Runs on schedule
+  on-schedule:
+    if: github.event_name == 'schedule'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Print scheduled event info
+        run: |
+          echo "Event: Scheduled"
+          echo "Cron Schedule: ${{ github.event.schedule }}"
+          echo "Time: $(date)"
+
+  # Job 5: Runs on repository dispatch
+  on-repository-dispatch:
+    if: github.event_name == 'repository_dispatch'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Print repository dispatch info
+        run: |
+          echo "Event: Repository Dispatch"
+          echo "Event Type: ${{ github.event.action }}"
+          echo "Client Payload: ${{ toJson(github.event.client_payload) }}"
+
+  # Job 6: Runs when another workflow completes
+  on-workflow-run:
+    if: github.event_name == 'workflow_run'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Print workflow run info
+        run: |
+          echo "Event: Workflow Run"
+          echo "Triggering Workflow: ${{ github.event.workflow_run.name }}"
+          echo "Conclusion: ${{ github.event.workflow_run.conclusion }}"
+
+# Event Trigger Reference:
+# - push: Code pushed to repository
+# - pull_request: PR opened, synchronized, or reopened
+# - workflow_dispatch: Manual trigger from UI
+# - schedule: Cron-based scheduling
+# - repository_dispatch: External API trigger
+# - workflow_run: Another workflow completes
+# - release: Release published
+# - issues: Issue opened, edited, etc.
+# - issue_comment: Comment on issue
+# - pull_request_review: PR review submitted
+# - push.branches: Filter by branch name
+# - push.paths: Filter by file paths
+# - pull_request.types: Filter by PR action type

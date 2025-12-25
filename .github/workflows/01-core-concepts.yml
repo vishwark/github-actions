@@ -1,0 +1,63 @@
+# GitHub Actions: Core Concepts
+# This workflow demonstrates the fundamental building blocks of GitHub Actions
+# Key concepts: workflows, jobs, steps, actions, runners
+
+name: 01 - Core Concepts
+
+# Trigger: When code is pushed to main branch
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:  # Allow manual trigger
+
+# Jobs: Define what work to do
+jobs:
+  # Job 1: Basic job with steps
+  basic-job:
+    # Runner: The machine that executes the job
+    runs-on: ubuntu-latest
+    
+    # Steps: Individual tasks within a job
+    steps:
+      # Step 1: Checkout code (using an action from marketplace)
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      # Step 2: Run a simple command
+      - name: Print environment info
+        run: |
+          echo "Job ID: ${{ job.status }}"
+          echo "Runner OS: ${{ runner.os }}"
+          echo "Runner Arch: ${{ runner.arch }}"
+      
+      # Step 3: Set up Node.js (using marketplace action)
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+      
+      # Step 4: Run npm commands
+      - name: Install and build
+        run: |
+          npm install
+          npm run build
+
+  # Job 2: Dependent job (runs after basic-job)
+  dependent-job:
+    needs: basic-job  # This job depends on basic-job
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Print job dependency info
+        run: echo "This job runs after basic-job completes successfully"
+
+# Workflow concepts explained:
+# - Workflow: Automated process defined in YAML
+# - Job: Set of steps that execute on the same runner
+# - Step: Individual task (action or command)
+# - Action: Reusable unit of code (from marketplace or custom)
+# - Runner: Virtual machine that executes the workflow
+# - Trigger: Event that starts the workflow (push, pull_request, etc.)

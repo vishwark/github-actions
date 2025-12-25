@@ -1,0 +1,170 @@
+# GitHub Actions: Runners
+# This workflow demonstrates different runner types and configurations
+# Key concepts: GitHub-hosted runners, self-hosted runners, machine images, runner labels
+
+name: 04 - Runners
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  # Job 1: Ubuntu runner (Linux)
+  ubuntu-runner:
+    name: Ubuntu Runner
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Print Ubuntu info
+        run: |
+          echo "=== Ubuntu Runner ==="
+          echo "OS: $(uname -s)"
+          echo "Kernel: $(uname -r)"
+          echo "Architecture: $(uname -m)"
+          echo "CPU Cores: $(nproc)"
+          echo "Memory: $(free -h | grep Mem)"
+          echo "Disk Space: $(df -h / | tail -1)"
+
+  # Job 2: Windows runner
+  windows-runner:
+    name: Windows Runner
+    runs-on: windows-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Print Windows info
+        run: |
+          echo "=== Windows Runner ==="
+          systeminfo | findstr /C:"OS Name" /C:"System Boot Time" /C:"Processor"
+
+  # Job 3: macOS runner
+  macos-runner:
+    name: macOS Runner
+    runs-on: macos-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Print macOS info
+        run: |
+          echo "=== macOS Runner ==="
+          echo "OS: $(sw_vers -productName)"
+          echo "Version: $(sw_vers -productVersion)"
+          echo "Build: $(sw_vers -buildVersion)"
+          echo "CPU Cores: $(sysctl -n hw.ncpu)"
+          echo "Memory: $(vm_stat | grep 'Pages free')"
+
+  # Job 4: Specific Ubuntu version
+  ubuntu-specific-version:
+    name: Ubuntu 22.04
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Print specific Ubuntu version
+        run: |
+          echo "=== Ubuntu 22.04 Specific ==="
+          lsb_release -a
+
+  # Job 5: Runner with labels (self-hosted example)
+  # Note: This would only run if you have a self-hosted runner with these labels
+  self-hosted-example:
+    name: Self-Hosted Runner (Example)
+    runs-on: [self-hosted, linux, x64]
+    if: false  # Disabled since most users won't have self-hosted runners
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Print self-hosted runner info
+        run: |
+          echo "=== Self-Hosted Runner ==="
+          echo "Runner Name: ${{ runner.name }}"
+          echo "Runner OS: ${{ runner.os }}"
+          echo "Runner Arch: ${{ runner.arch }}"
+
+  # Job 6: Container job (runs in Docker container)
+  container-job:
+    name: Container Job
+    runs-on: ubuntu-latest
+    container:
+      image: node:18-alpine
+      options: --cpus 2 --memory 1g
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Print container info
+        run: |
+          echo "=== Container Environment ==="
+          echo "Node Version: $(node --version)"
+          echo "NPM Version: $(npm --version)"
+          echo "OS: $(cat /etc/os-release | grep PRETTY_NAME)"
+
+  # Job 7: Job with services (databases, etc.)
+  job-with-services:
+    name: Job with Services
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_PASSWORD: postgres
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Test database connection
+        run: |
+          echo "=== Testing Database Connection ==="
+          echo "PostgreSQL is running on localhost:5432"
+
+  # Job 8: Print runner context information
+  runner-context:
+    name: Runner Context Info
+    runs-on: ubuntu-latest
+    steps:
+      - name: Print runner context
+        run: |
+          echo "=== Runner Context ==="
+          echo "Runner Name: ${{ runner.name }}"
+          echo "Runner OS: ${{ runner.os }}"
+          echo "Runner Arch: ${{ runner.arch }}"
+          echo "Runner Temp: ${{ runner.temp }}"
+          echo "Runner Tool Cache: ${{ runner.tool_cache }}"
+
+# Runner Types Reference:
+# GitHub-Hosted Runners:
+#   - ubuntu-latest, ubuntu-22.04, ubuntu-20.04
+#   - windows-latest, windows-2022, windows-2019
+#   - macos-latest, macos-13, macos-12
+#
+# Self-Hosted Runners:
+#   - Custom labels for organization
+#   - Can run on any machine (Linux, Windows, macOS)
+#   - Requires GitHub Actions runner software
+#
+# Runner Specifications:
+#   - CPU: 2-core (GitHub-hosted)
+#   - Memory: 7 GB (GitHub-hosted)
+#   - Storage: 14 GB (GitHub-hosted)
+#   - Timeout: 6 hours per job
+#
+# Container Jobs:
+#   - Run steps in Docker container
+#   - Useful for consistent environments
+#   - Can specify image and options
+#
+# Services:
+#   - Run additional containers (databases, etc.)
+#   - Accessible via localhost
+#   - Useful for integration testing

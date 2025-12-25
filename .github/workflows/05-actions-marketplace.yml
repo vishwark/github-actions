@@ -1,0 +1,207 @@
+# GitHub Actions: Actions - Marketplace, Composite, and Custom
+# This workflow demonstrates using marketplace actions and creating custom actions
+# Key concepts: marketplace actions, composite actions, action inputs/outputs
+
+name: 05 - Actions & Marketplace
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  # Job 1: Using marketplace actions
+  marketplace-actions:
+    name: Marketplace Actions
+    runs-on: ubuntu-latest
+    steps:
+      # Action 1: Checkout (official GitHub action)
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      # Action 2: Setup Node.js (official GitHub action)
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+
+      # Action 3: Setup Python (official GitHub action)
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+
+      # Action 4: Popular marketplace action - SonarCloud
+      - name: SonarCloud Scan (Example)
+        uses: SonarSource/sonarcloud-github-action@master
+        if: false  # Disabled - requires SonarCloud token
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+
+      # Action 5: Popular marketplace action - CodeQL
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v2
+        if: false  # Disabled - requires CodeQL setup
+        with:
+          languages: 'javascript'
+
+      # Action 6: Popular marketplace action - Upload artifacts
+      - name: Upload artifact (Example)
+        uses: actions/upload-artifact@v3
+        if: false  # Disabled - no artifacts to upload
+        with:
+          name: build-output
+          path: dist/
+          retention-days: 30
+
+  # Job 2: Composite action example (local)
+  composite-action-example:
+    name: Composite Action Example
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      # Using a composite action from local repository
+      - name: Run composite action
+        uses: ./.github/actions/custom-composite-action
+        if: false  # Disabled - action doesn't exist yet
+        with:
+          message: "Hello from composite action"
+
+  # Job 3: Action with outputs
+  action-with-outputs:
+    name: Action with Outputs
+    runs-on: ubuntu-latest
+    outputs:
+      build-id: ${{ steps.build.outputs.id }}
+      build-time: ${{ steps.build.outputs.time }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      # Step that generates outputs
+      - name: Generate build info
+        id: build
+        run: |
+          echo "id=$(date +%s)" >> $GITHUB_OUTPUT
+          echo "time=$(date)" >> $GITHUB_OUTPUT
+
+  # Job 4: Using outputs from previous job
+  use-job-outputs:
+    name: Use Job Outputs
+    needs: action-with-outputs
+    runs-on: ubuntu-latest
+    steps:
+      - name: Print outputs from previous job
+        run: |
+          echo "Build ID: ${{ needs.action-with-outputs.outputs.build-id }}"
+          echo "Build Time: ${{ needs.action-with-outputs.outputs.build-time }}"
+
+  # Job 5: Popular marketplace actions for CI/CD
+  popular-actions:
+    name: Popular Marketplace Actions
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      # Action: GitHub CLI
+      - name: GitHub CLI example
+        uses: github/gh-actions-core@v1
+        if: false
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
+      # Action: Create Release
+      - name: Create Release (Example)
+        uses: actions/create-release@v1
+        if: false  # Disabled - requires proper setup
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: v1.0.0
+          release_name: Release v1.0.0
+          draft: false
+          prerelease: false
+
+      # Action: Deploy to GitHub Pages
+      - name: Deploy to GitHub Pages (Example)
+        uses: peaceiris/actions-gh-pages@v3
+        if: false  # Disabled - requires gh-pages branch
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./dist
+
+  # Job 6: Action with conditional execution
+  conditional-actions:
+    name: Conditional Actions
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      # Only run on main branch
+      - name: Action on main branch
+        if: github.ref == 'refs/heads/main'
+        run: echo "Running on main branch"
+
+      # Only run on pull requests
+      - name: Action on pull request
+        if: github.event_name == 'pull_request'
+        run: echo "Running on pull request"
+
+      # Only run on failure
+      - name: Action on failure
+        if: failure()
+        run: echo "Previous step failed"
+
+  # Job 7: Action with matrix strategy
+  matrix-actions:
+    name: Matrix Actions
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        node-version: [16, 18, 20]
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+
+      - name: Print Node version
+        run: node --version
+
+# Marketplace Actions Reference:
+# Official GitHub Actions:
+#   - actions/checkout: Clone repository
+#   - actions/setup-node: Setup Node.js
+#   - actions/setup-python: Setup Python
+#   - actions/setup-java: Setup Java
+#   - actions/upload-artifact: Upload build artifacts
+#   - actions/download-artifact: Download artifacts
+#   - actions/create-release: Create GitHub release
+#
+# Popular Community Actions:
+#   - SonarSource/sonarcloud-github-action: Code quality
+#   - github/codeql-action: Security scanning
+#   - peaceiris/actions-gh-pages: Deploy to GitHub Pages
+#   - actions/cache: Cache dependencies
+#   - actions/setup-docker: Setup Docker
+#
+# Action Types:
+#   1. JavaScript Actions: Run JavaScript code
+#   2. Docker Actions: Run in Docker container
+#   3. Composite Actions: Combine multiple actions/steps
+#
+# Action Inputs/Outputs:
+#   - inputs: Parameters passed to action
+#   - outputs: Values returned from action
+#   - id: Identifier for accessing step outputs

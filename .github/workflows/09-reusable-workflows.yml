@@ -1,0 +1,239 @@
+# GitHub Actions: Reusable Workflows & DRY Patterns
+# This workflow demonstrates reusable workflows and DRY (Don't Repeat Yourself) patterns
+# Key concepts: workflow_call, inputs, outputs, secrets, calling workflows from workflows
+
+name: 09 - Reusable Workflows
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  # Job 1: Call a reusable workflow (example)
+  call-reusable-workflow:
+    name: Call Reusable Workflow
+    uses: ./.github/workflows/reusable-workflow.yml
+    if: false  # Disabled - reusable workflow doesn't exist yet
+    with:
+      node-version: '18'
+      environment: 'staging'
+    secrets:
+      API_KEY: ${{ secrets.API_KEY }}
+
+  # Job 2: Demonstrate workflow composition
+  workflow-composition:
+    name: Workflow Composition
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Print workflow composition info
+        run: |
+          echo "=== Workflow Composition ==="
+          echo "Reusable workflows allow:"
+          echo "1. Code reuse across workflows"
+          echo "2. Consistent CI/CD patterns"
+          echo "3. Centralized workflow logic"
+          echo "4. Easier maintenance"
+          echo "5. Better organization"
+
+  # Job 3: Demonstrate workflow inputs
+  workflow-with-inputs:
+    name: Workflow with Inputs
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Print input handling
+        run: |
+          echo "=== Workflow Inputs ==="
+          echo "Inputs allow passing parameters to workflows"
+          echo "Types: string, choice, boolean, environment"
+          echo "Can be required or optional"
+          echo "Useful for parameterized workflows"
+
+  # Job 4: Demonstrate workflow outputs
+  workflow-with-outputs:
+    name: Workflow with Outputs
+    runs-on: ubuntu-latest
+    outputs:
+      build-version: ${{ steps.version.outputs.version }}
+      build-timestamp: ${{ steps.timestamp.outputs.time }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Generate version
+        id: version
+        run: echo "version=$(date +%Y.%m.%d)" >> $GITHUB_OUTPUT
+
+      - name: Generate timestamp
+        id: timestamp
+        run: echo "time=$(date -u +'%Y-%m-%dT%H:%M:%SZ')" >> $GITHUB_OUTPUT
+
+  # Job 5: Use outputs from previous job
+  use-workflow-outputs:
+    name: Use Workflow Outputs
+    needs: workflow-with-outputs
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Print outputs
+        run: |
+          echo "Build Version: ${{ needs.workflow-with-outputs.outputs.build-version }}"
+          echo "Build Timestamp: ${{ needs.workflow-with-outputs.outputs.build-timestamp }}"
+
+  # Job 6: Conditional workflow execution
+  conditional-workflow:
+    name: Conditional Workflow
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Run on main branch
+        if: github.ref == 'refs/heads/main'
+        run: echo "Running on main branch"
+
+      - name: Run on pull request
+        if: github.event_name == 'pull_request'
+        run: echo "Running on pull request"
+
+  # Job 7: Workflow with error handling
+  workflow-error-handling:
+    name: Workflow Error Handling
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Step that might fail
+        continue-on-error: true
+        run: |
+          echo "This step might fail"
+          exit 1
+
+      - name: Cleanup after failure
+        if: failure()
+        run: echo "Cleaning up after failure"
+
+      - name: Final step
+        if: always()
+        run: echo "This always runs"
+
+  # Job 8: Workflow with matrix and reusable patterns
+  matrix-workflow:
+    name: Matrix Workflow - ${{ matrix.config.name }}
+    runs-on: ${{ matrix.config.os }}
+    strategy:
+      matrix:
+        config:
+          - name: Ubuntu Build
+            os: ubuntu-latest
+            node-version: '18'
+          - name: Windows Build
+            os: windows-latest
+            node-version: '18'
+          - name: macOS Build
+            os: macos-latest
+            node-version: '18'
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.config.node-version }}
+
+      - name: Build on ${{ matrix.config.name }}
+        run: npm run build
+
+  # Job 9: Workflow with secrets handling
+  workflow-secrets:
+    name: Workflow Secrets
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Use secrets safely
+        run: |
+          echo "Secrets are available in workflows"
+          echo "Never log or expose secrets"
+          echo "Use environment variables for secrets"
+          echo "Secrets are masked in logs"
+
+  # Job 10: Workflow orchestration
+  workflow-orchestration:
+    name: Workflow Orchestration
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Print orchestration info
+        run: |
+          echo "=== Workflow Orchestration ==="
+          echo "Workflows can be orchestrated using:"
+          echo "1. workflow_run trigger"
+          echo "2. Job dependencies (needs)"
+          echo "3. Conditional execution (if)"
+          echo "4. Matrix strategies"
+          echo "5. Reusable workflows"
+
+# Reusable Workflows Reference:
+# Reusable Workflow Structure:
+#   on:
+#     workflow_call:
+#       inputs:
+#         param-name:
+#           type: string
+#           required: true
+#       outputs:
+#         output-name:
+#           value: ${{ jobs.job-id.outputs.output-name }}
+#       secrets:
+#         secret-name:
+#           required: true
+#
+# Calling a Reusable Workflow:
+#   jobs:
+#     call-workflow:
+#       uses: owner/repo/.github/workflows/workflow.yml@ref
+#       with:
+#         param-name: value
+#       secrets:
+#         secret-name: ${{ secrets.SECRET_NAME }}
+#
+# Input Types:
+#   - string: Text input
+#   - choice: Dropdown selection
+#   - boolean: True/false
+#   - environment: Environment selection
+#
+# Output Handling:
+#   - Define outputs in reusable workflow
+#   - Access via: needs.job-id.outputs.output-name
+#   - Can pass between jobs
+#
+# Best Practices:
+#   1. Create reusable workflows for common tasks
+#   2. Use clear input/output names
+#   3. Document workflow parameters
+#   4. Handle errors gracefully
+#   5. Use secrets for sensitive data
+#   6. Version reusable workflows
+#   7. Test workflows before using
+#
+# DRY Patterns:
+#   1. Extract common steps into reusable workflows
+#   2. Use composite actions for step groups
+#   3. Use workflow templates
+#   4. Centralize configuration
+#   5. Share workflows across repositories

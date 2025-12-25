@@ -1,0 +1,319 @@
+# GitHub Actions: Testing, Debugging, and Local Development
+# This workflow demonstrates testing strategies, debugging techniques, and local development
+# Key concepts: workflow_run, act alternatives, logging tips, debugging workflows
+
+name: 11 - Testing & Debugging
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  # Job 1: Unit testing
+  unit-tests:
+    name: Unit Tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Run unit tests
+        run: npm test -- --coverage
+
+      - name: Upload coverage
+        uses: actions/upload-artifact@v3
+        if: always()
+        with:
+          name: coverage-report
+          path: coverage/
+
+  # Job 2: Integration testing
+  integration-tests:
+    name: Integration Tests
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_PASSWORD: postgres
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Run integration tests
+        run: npm run test:integration
+        env:
+          DATABASE_URL: postgres://postgres:postgres@localhost:5432/test
+
+  # Job 3: E2E testing
+  e2e-tests:
+    name: E2E Tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Run E2E tests
+        run: npm run test:e2e
+
+  # Job 4: Linting and code quality
+  code-quality:
+    name: Code Quality
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Run linter
+        run: npm run lint
+
+      - name: Check code formatting
+        run: npm run format:check
+
+  # Job 5: Debugging with logging
+  debugging-logging:
+    name: Debugging & Logging
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Print debug information
+        run: |
+          echo "=== Debug Information ==="
+          echo "GitHub Context:"
+          echo "  Event: ${{ github.event_name }}"
+          echo "  Ref: ${{ github.ref }}"
+          echo "  SHA: ${{ github.sha }}"
+          echo "  Actor: ${{ github.actor }}"
+          echo ""
+          echo "Runner Information:"
+          echo "  OS: ${{ runner.os }}"
+          echo "  Arch: ${{ runner.arch }}"
+          echo "  Temp: ${{ runner.temp }}"
+
+      - name: Enable debug logging
+        run: |
+          echo "ACTIONS_STEP_DEBUG=true" >> $GITHUB_ENV
+
+      - name: Print with debug logging
+        run: echo "This will show debug logs"
+
+  # Job 6: Conditional debugging
+  conditional-debugging:
+    name: Conditional Debugging
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Debug on failure
+        if: failure()
+        run: |
+          echo "=== Debug Information ==="
+          echo "Workflow failed, collecting debug info"
+          echo "Check logs for more details"
+
+      - name: Debug on success
+        if: success()
+        run: echo "Workflow succeeded"
+
+  # Job 7: Workflow run trigger (for testing)
+  workflow-run-trigger:
+    name: Workflow Run Trigger
+    runs-on: ubuntu-latest
+    if: false  # Disabled - for demonstration
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Print workflow run info
+        run: |
+          echo "=== Workflow Run Trigger ==="
+          echo "This workflow is triggered by another workflow"
+          echo "Useful for: Testing, debugging, chaining workflows"
+
+  # Job 8: Test reporting
+  test-reporting:
+    name: Test Reporting
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Run tests with reporting
+        run: npm test -- --reporter=json > test-results.json || true
+
+      - name: Upload test results
+        uses: actions/upload-artifact@v3
+        if: always()
+        with:
+          name: test-results
+          path: test-results.json
+
+  # Job 9: Performance testing
+  performance-testing:
+    name: Performance Testing
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Run performance tests
+        run: |
+          echo "=== Performance Testing ==="
+          echo "Measuring build time..."
+          time npm run build
+
+  # Job 10: Debugging tips and best practices
+  debugging-tips:
+    name: Debugging Tips
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Print debugging tips
+        run: |
+          echo "=== GitHub Actions Debugging Tips ==="
+          echo ""
+          echo "1. Enable Debug Logging:"
+          echo "   - Set ACTIONS_STEP_DEBUG=true"
+          echo "   - Shows detailed step execution"
+          echo ""
+          echo "2. Use Workflow Logs:"
+          echo "   - Check Actions tab in GitHub"
+          echo "   - View step-by-step execution"
+          echo "   - See error messages"
+          echo ""
+          echo "3. Print Context Variables:"
+          echo "   - Use: echo \${{ github.* }}"
+          echo "   - Helps understand workflow state"
+          echo ""
+          echo "4. Use Artifacts:"
+          echo "   - Upload logs and reports"
+          echo "   - Download for analysis"
+          echo ""
+          echo "5. Local Testing with act:"
+          echo "   - Run workflows locally"
+          echo "   - Test before pushing"
+          echo "   - Faster feedback loop"
+          echo ""
+          echo "6. Conditional Steps:"
+          echo "   - Use: if: failure()"
+          echo "   - Use: if: success()"
+          echo "   - Use: if: always()"
+          echo ""
+          echo "7. Continue on Error:"
+          echo "   - Use: continue-on-error: true"
+          echo "   - Allows cleanup steps"
+          echo ""
+          echo "8. Timeout Configuration:"
+          echo "   - Set job timeout-minutes"
+          echo "   - Prevent hanging workflows"
+
+# Testing & Debugging Reference:
+# Test Types:
+#   - Unit Tests: Test individual functions
+#   - Integration Tests: Test component interactions
+#   - E2E Tests: Test complete workflows
+#   - Performance Tests: Measure speed/resources
+#
+# Testing Tools:
+#   - Jest: JavaScript testing framework
+#   - Mocha: Test runner
+#   - Cypress: E2E testing
+#   - Playwright: Browser automation
+#
+# Debugging Techniques:
+#   1. Enable debug logging (ACTIONS_STEP_DEBUG=true)
+#   2. Print context variables
+#   3. Use conditional steps
+#   4. Upload artifacts for analysis
+#   5. Check workflow logs
+#   6. Use local testing (act)
+#
+# Local Development:
+#   - act: Run workflows locally
+#   - Docker: Required for act
+#   - Simulate GitHub environment
+#   - Test before pushing
+#
+# Logging Best Practices:
+#   1. Use echo for output
+#   2. Structure logs clearly
+#   3. Include timestamps
+#   4. Log important variables
+#   5. Use log levels (info, warn, error)
+#   6. Never log secrets
+#
+# Workflow Debugging:
+#   - workflow_run: Trigger on other workflow
+#   - Conditional execution: if conditions
+#   - Step outputs: Pass data between steps
+#   - Job outputs: Pass data between jobs
+#   - Artifacts: Store and retrieve files

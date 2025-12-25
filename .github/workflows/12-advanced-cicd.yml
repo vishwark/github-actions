@@ -1,0 +1,338 @@
+# GitHub Actions: Advanced CI/CD Patterns
+# This workflow demonstrates advanced CI/CD patterns and deployment strategies
+# Key concepts: deployment, environments, approvals, artifacts, monorepo strategies
+
+name: 12 - Advanced CI/CD
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Environment to deploy to'
+        required: true
+        type: choice
+        options:
+          - staging
+          - production
+
+jobs:
+  # Job 1: Build and test
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    outputs:
+      build-version: ${{ steps.version.outputs.version }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Generate version
+        id: version
+        run: echo "version=$(date +%Y.%m.%d.%s)" >> $GITHUB_OUTPUT
+
+      - name: Build project
+        run: npm run build
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v3
+        with:
+          name: build-${{ steps.version.outputs.version }}
+          path: dist/
+          retention-days: 30
+
+  # Job 2: Run tests
+  test:
+    name: Test
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Run tests
+        run: npm test
+
+      - name: Run linter
+        run: npm run lint
+
+  # Job 3: Security scanning
+  security:
+    name: Security Scan
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      security-events: write
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Run security audit
+        run: npm audit --audit-level=moderate || true
+
+  # Job 4: Deploy to staging
+  deploy-staging:
+    name: Deploy to Staging
+    runs-on: ubuntu-latest
+    needs: [build, test, security]
+    if: github.ref == 'refs/heads/develop' || github.event_name == 'workflow_dispatch'
+    environment:
+      name: staging
+      url: https://staging.example.com
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Download build artifacts
+        uses: actions/download-artifact@v3
+        with:
+          name: build-${{ needs.build.outputs.build-version }}
+          path: ./dist
+
+      - name: Deploy to staging
+        run: |
+          echo "Deploying to staging environment"
+          echo "Build version: ${{ needs.build.outputs.build-version }}"
+          echo "Files: $(ls -1 ./dist | wc -l)"
+
+  # Job 5: Deploy to production
+  deploy-production:
+    name: Deploy to Production
+    runs-on: ubuntu-latest
+    needs: [build, test, security, deploy-staging]
+    if: github.ref == 'refs/heads/main'
+    environment:
+      name: production
+      url: https://example.com
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Download build artifacts
+        uses: actions/download-artifact@v3
+        with:
+          name: build-${{ needs.build.outputs.build-version }}
+          path: ./dist
+
+      - name: Deploy to production
+        run: |
+          echo "Deploying to production environment"
+          echo "Build version: ${{ needs.build.outputs.build-version }}"
+          echo "Files: $(ls -1 ./dist | wc -l)"
+
+  # Job 6: Monorepo strategy
+  monorepo-build:
+    name: Monorepo Build
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        package: [frontend, backend, shared]
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Build ${{ matrix.package }}
+        run: npm run build -- --scope=${{ matrix.package }}
+
+  # Job 7: Blue-green deployment
+  blue-green-deployment:
+    name: Blue-Green Deployment
+    runs-on: ubuntu-latest
+    if: false  # Disabled - for demonstration
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Deploy to green environment
+        run: echo "Deploying to green environment"
+
+      - name: Run smoke tests
+        run: echo "Running smoke tests on green"
+
+      - name: Switch traffic to green
+        run: echo "Switching traffic from blue to green"
+
+  # Job 8: Canary deployment
+  canary-deployment:
+    name: Canary Deployment
+    runs-on: ubuntu-latest
+    if: false  # Disabled - for demonstration
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Deploy to canary
+        run: echo "Deploying to 5% of traffic"
+
+      - name: Monitor metrics
+        run: echo "Monitoring error rates and latency"
+
+      - name: Rollout to 100%
+        run: echo "Rolling out to 100% of traffic"
+
+  # Job 9: Rollback strategy
+  rollback-strategy:
+    name: Rollback Strategy
+    runs-on: ubuntu-latest
+    if: false  # Disabled - for demonstration
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Detect deployment failure
+        run: echo "Checking deployment health"
+
+      - name: Rollback to previous version
+        run: echo "Rolling back to previous stable version"
+
+  # Job 10: Advanced CI/CD patterns summary
+  cicd-summary:
+    name: CI/CD Patterns Summary
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Print CI/CD patterns
+        run: |
+          echo "=== Advanced CI/CD Patterns ==="
+          echo ""
+          echo "Deployment Strategies:"
+          echo "  1. Blue-Green: Two identical environments"
+          echo "  2. Canary: Gradual rollout to subset"
+          echo "  3. Rolling: Gradual replacement"
+          echo "  4. Feature Flags: Toggle features"
+          echo ""
+          echo "Environment Management:"
+          echo "  - Staging: Pre-production testing"
+          echo "  - Production: Live environment"
+          echo "  - Protection rules: Approval requirements"
+          echo "  - Secrets: Environment-specific secrets"
+          echo ""
+          echo "Monorepo Strategies:"
+          echo "  - Workspace management"
+          echo "  - Selective builds"
+          echo "  - Shared dependencies"
+          echo "  - Independent versioning"
+          echo ""
+          echo "Artifact Management:"
+          echo "  - Build artifacts"
+          echo "  - Release artifacts"
+          echo "  - Retention policies"
+          echo "  - Versioning"
+          echo ""
+          echo "Approval Workflows:"
+          echo "  - Manual approvals"
+          echo "  - Required reviewers"
+          echo "  - Status checks"
+          echo "  - Environment protection"
+          echo ""
+          echo "Monitoring & Observability:"
+          echo "  - Health checks"
+          echo "  - Metrics collection"
+          echo "  - Log aggregation"
+          echo "  - Alert integration"
+
+# Advanced CI/CD Reference:
+# Deployment Strategies:
+#   1. Blue-Green:
+#      - Two identical production environments
+#      - Switch traffic between them
+#      - Zero-downtime deployments
+#      - Easy rollback
+#
+#   2. Canary:
+#      - Deploy to small percentage first
+#      - Monitor metrics
+#      - Gradually increase traffic
+#      - Automatic rollback on errors
+#
+#   3. Rolling:
+#      - Replace instances gradually
+#      - Maintain service availability
+#      - Slower than blue-green
+#      - Good for large deployments
+#
+#   4. Feature Flags:
+#      - Deploy code without enabling
+#      - Toggle features at runtime
+#      - A/B testing
+#      - Gradual rollout
+#
+# Environment Protection:
+#   - Require reviews before deployment
+#   - Restrict deployment branches
+#   - Require status checks to pass
+#   - Require dismissal of stale reviews
+#   - Custom deployment branches
+#
+# Monorepo Patterns:
+#   - Workspace management (npm workspaces)
+#   - Selective builds (build only changed packages)
+#   - Shared dependencies (common packages)
+#   - Independent versioning (per-package versions)
+#   - Dependency graph analysis
+#
+# Artifact Management:
+#   - Build artifacts: Compiled code
+#   - Release artifacts: Packaged releases
+#   - Retention policies: How long to keep
+#   - Versioning: Semantic versioning
+#   - Signing: Code signing for releases
+#
+# Approval Workflows:
+#   - Manual approvals: Require human approval
+#   - Required reviewers: Specific people
+#   - Status checks: Automated checks
+#   - Environment protection: Deployment gates
+#
+# Best Practices:
+#   1. Automate everything possible
+#   2. Test thoroughly before production
+#   3. Use environment protection rules
+#   4. Implement gradual rollouts
+#   5. Monitor deployments closely
+#   6. Have rollback procedures
+#   7. Document deployment process
+#   8. Use semantic versioning
+#   9. Maintain audit logs
+#   10. Plan for disaster recovery

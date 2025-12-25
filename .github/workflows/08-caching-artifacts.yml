@@ -1,0 +1,304 @@
+# GitHub Actions: Caching, Dependency Cache & Artifacts
+# This workflow demonstrates caching dependencies and managing artifacts
+# Key concepts: actions/cache, dependency caching, artifacts, passing data between jobs
+
+name: 08 - Caching & Artifacts
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  # Job 1: Basic caching with actions/cache
+  basic-caching:
+    name: Basic Caching
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Cache npm dependencies
+        uses: actions/cache@v3
+        with:
+          path: ~/.npm
+          key: ${{ runner.os }}-npm-${{ hashFiles('**/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-npm-
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Run build
+        run: npm run build
+
+  # Job 2: Dependency caching (automatic)
+  dependency-caching:
+    name: Dependency Caching
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      # Setup Node.js with automatic npm cache
+      - name: Setup Node.js with cache
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'  # Automatically cache npm dependencies
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Run tests
+        run: npm test
+
+  # Job 3: Multiple cache paths
+  multiple-cache-paths:
+    name: Multiple Cache Paths
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Cache multiple paths
+        uses: actions/cache@v3
+        with:
+          path: |
+            ~/.npm
+            ~/.cache/pip
+            node_modules/
+          key: ${{ runner.os }}-build-${{ hashFiles('**/package-lock.json', '**/requirements.txt') }}
+          restore-keys: |
+            ${{ runner.os }}-build-
+
+      - name: Install dependencies
+        run: npm install
+
+  # Job 4: Cache with matrix strategy
+  cache-with-matrix:
+    name: Cache with Matrix - Node ${{ matrix.node-version }}
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        node-version: [16, 18, 20]
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Run tests
+        run: npm test
+
+  # Job 5: Upload artifacts
+  build-and-upload:
+    name: Build and Upload Artifacts
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Build project
+        run: npm run build
+
+      # Upload build artifacts
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v3
+        with:
+          name: build-output
+          path: dist/
+          retention-days: 30
+
+      # Upload test results
+      - name: Upload test results
+        if: always()  # Run even if tests fail
+        uses: actions/upload-artifact@v3
+        with:
+          name: test-results
+          path: coverage/
+          retention-days: 7
+
+  # Job 6: Download and use artifacts
+  download-and-use:
+    name: Download and Use Artifacts
+    needs: build-and-upload
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download build artifacts
+        uses: actions/download-artifact@v3
+        with:
+          name: build-output
+          path: ./dist
+
+      - name: List downloaded artifacts
+        run: |
+          echo "=== Downloaded Artifacts ==="
+          ls -la ./dist
+
+      - name: Deploy artifacts
+        run: |
+          echo "Deploying artifacts from dist/"
+          echo "Files: $(ls -1 ./dist | wc -l)"
+
+  # Job 7: Artifact retention and cleanup
+  artifact-management:
+    name: Artifact Management
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Create test artifact
+        run: |
+          mkdir -p artifacts
+          echo "Test data" > artifacts/test.txt
+          echo "Build info: $(date)" > artifacts/build-info.txt
+
+      # Upload with short retention
+      - name: Upload temporary artifacts
+        uses: actions/upload-artifact@v3
+        with:
+          name: temp-artifacts
+          path: artifacts/
+          retention-days: 1  # Delete after 1 day
+
+      # Upload with long retention
+      - name: Upload release artifacts
+        uses: actions/upload-artifact@v3
+        with:
+          name: release-artifacts
+          path: artifacts/
+          retention-days: 90  # Keep for 90 days
+
+  # Job 8: Cache invalidation strategies
+  cache-invalidation:
+    name: Cache Invalidation
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      # Strategy 1: Hash-based cache key
+      - name: Cache with hash
+        uses: actions/cache@v3
+        with:
+          path: ~/.npm
+          key: ${{ runner.os }}-npm-${{ hashFiles('**/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-npm-
+
+      # Strategy 2: Date-based cache key (invalidate daily)
+      - name: Cache with date
+        uses: actions/cache@v3
+        with:
+          path: ~/.cache/build
+          key: ${{ runner.os }}-build-${{ github.run_id }}-${{ github.run_number }}
+          restore-keys: |
+            ${{ runner.os }}-build-
+
+      # Strategy 3: Branch-specific cache
+      - name: Cache by branch
+        uses: actions/cache@v3
+        with:
+          path: ~/.cache/branch-cache
+          key: ${{ runner.os }}-${{ github.ref }}-${{ hashFiles('**/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-${{ github.ref }}-
+            ${{ runner.os }}-
+
+  # Job 9: Partial cache restore
+  partial-cache-restore:
+    name: Partial Cache Restore
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Restore cache with fallback
+        uses: actions/cache@v3
+        with:
+          path: |
+            node_modules/
+            ~/.npm
+          key: ${{ runner.os }}-npm-${{ hashFiles('**/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-npm-
+            ${{ runner.os }}-
+
+      - name: Install dependencies
+        run: npm install
+
+  # Job 10: Cache statistics
+  cache-statistics:
+    name: Cache Statistics
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Print cache info
+        run: |
+          echo "=== Cache Information ==="
+          echo "Cache size limit: 5 GB per repository"
+          echo "Cache retention: 7 days (default)"
+          echo "Cache key format: runner.os-hashFiles-pattern"
+          echo ""
+          echo "Best practices:"
+          echo "1. Use hashFiles() for cache keys"
+          echo "2. Include restore-keys for fallback"
+          echo "3. Set appropriate retention-days"
+          echo "4. Use matrix-specific cache keys"
+          echo "5. Monitor cache hit rates"
+
+# Caching & Artifacts Reference:
+# Cache Actions:
+#   - actions/cache: Generic caching
+#   - actions/setup-node: Automatic npm cache
+#   - actions/setup-python: Automatic pip cache
+#
+# Cache Key Strategies:
+#   - hashFiles(): Hash-based invalidation
+#   - github.run_id: Unique per run
+#   - github.ref: Branch-specific
+#   - runner.os: OS-specific
+#
+# Artifact Actions:
+#   - actions/upload-artifact: Upload files
+#   - actions/download-artifact: Download files
+#
+# Artifact Options:
+#   - name: Artifact identifier
+#   - path: Files to upload
+#   - retention-days: How long to keep (1-90)
+#   - if-no-files-found: Error handling
+#
+# Cache Limits:
+#   - 5 GB per repository
+#   - 7 days retention (default)
+#   - LRU eviction when full
+#
+# Best Practices:
+#   1. Use hashFiles() for dependency caching
+#   2. Include restore-keys for fallback
+#   3. Set appropriate retention periods
+#   4. Use matrix-specific cache keys
+#   5. Monitor cache hit rates
+#   6. Clean up old artifacts
+#   7. Use separate caches for different purposes

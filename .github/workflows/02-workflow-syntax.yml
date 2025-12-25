@@ -1,0 +1,108 @@
+# GitHub Actions: Workflow Syntax & YAML Basics
+# This workflow demonstrates YAML syntax and common workflow keywords
+# Key concepts: on, jobs, steps, uses, run, env, if, needs
+
+name: 02 - Workflow Syntax & YAML Basics
+
+# 'on' keyword: Specifies when the workflow runs
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+# Environment variables available to all jobs
+env:
+  GLOBAL_VAR: "Available in all jobs"
+  NODE_VERSION: "18"
+
+jobs:
+  syntax-demo:
+    runs-on: ubuntu-latest
+    
+    # Job-level environment variables
+    env:
+      JOB_VAR: "Available only in this job"
+      BUILD_TYPE: "production"
+    
+    steps:
+      # Step 1: Demonstrate 'uses' keyword (run an action)
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Fetch all history
+      
+      # Step 2: Demonstrate 'run' keyword (execute shell commands)
+      - name: Run shell commands
+        run: |
+          echo "=== YAML Syntax Demo ==="
+          echo "Global var: $GLOBAL_VAR"
+          echo "Job var: $JOB_VAR"
+          echo "Build type: $BUILD_TYPE"
+      
+      # Step 3: Demonstrate 'env' in step
+      - name: Step-level environment variables
+        env:
+          STEP_VAR: "Only in this step"
+        run: echo "Step var: $STEP_VAR"
+      
+      # Step 4: Demonstrate 'if' conditional
+      - name: Conditional step (if branch is main)
+        if: github.ref == 'refs/heads/main'
+        run: echo "This runs only on main branch"
+      
+      # Step 5: Demonstrate 'if' with failure condition
+      - name: Step that might fail
+        if: always()  # Run even if previous steps failed
+        run: echo "This runs regardless of previous step status"
+      
+      # Step 6: Demonstrate context variables
+      - name: Print context information
+        run: |
+          echo "Event: ${{ github.event_name }}"
+          echo "Ref: ${{ github.ref }}"
+          echo "SHA: ${{ github.sha }}"
+          echo "Actor: ${{ github.actor }}"
+          echo "Repository: ${{ github.repository }}"
+      
+      # Step 7: Demonstrate outputs
+      - name: Generate output
+        id: generate
+        run: echo "message=Hello from workflow" >> $GITHUB_OUTPUT
+      
+      # Step 8: Use output from previous step
+      - name: Use previous step output
+        run: echo "Output: ${{ steps.generate.outputs.message }}"
+
+  # Job 2: Demonstrate 'needs' keyword
+  dependent-job:
+    needs: syntax-demo  # This job waits for syntax-demo to complete
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: This runs after syntax-demo
+        run: echo "Job dependency satisfied"
+
+  # Job 3: Demonstrate conditional job execution
+  conditional-job:
+    if: github.event_name == 'push'  # Only run on push events
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: This only runs on push events
+        run: echo "Push event detected"
+
+# YAML Syntax Reference:
+# - 'on': Workflow trigger events
+# - 'jobs': Container for all jobs
+# - 'runs-on': Runner type
+# - 'steps': List of tasks
+# - 'uses': Run an action
+# - 'run': Execute shell command
+# - 'env': Set environment variables
+# - 'if': Conditional execution
+# - 'needs': Job dependencies
+# - 'with': Pass inputs to actions
+# - 'id': Identifier for step outputs
+# - Context variables: ${{ github.* }}, ${{ runner.* }}, ${{ job.* }}

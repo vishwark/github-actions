@@ -1,0 +1,266 @@
+# GitHub Actions: Matrix Builds & Strategies
+# This workflow demonstrates matrix strategy for testing multiple configurations
+# Key concepts: strategy.matrix, include, exclude, fail-fast
+
+name: 06 - Matrix Builds & Strategies
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  # Job 1: Basic matrix strategy
+  basic-matrix:
+    name: Test on Node ${{ matrix.node-version }}
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        node-version: [16, 18, 20]
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Run tests
+        run: npm test
+
+  # Job 2: Multi-dimensional matrix
+  multi-dimensional-matrix:
+    name: Test ${{ matrix.os }} - Node ${{ matrix.node-version }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+        node-version: [18, 20]
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+
+      - name: Print environment
+        run: |
+          echo "OS: ${{ matrix.os }}"
+          echo "Node: ${{ matrix.node-version }}"
+          node --version
+
+  # Job 3: Matrix with include
+  matrix-with-include:
+    name: Test ${{ matrix.config.name }}
+    runs-on: ${{ matrix.config.os }}
+    strategy:
+      matrix:
+        config:
+          - name: Ubuntu Node 18
+            os: ubuntu-latest
+            node-version: 18
+          - name: Ubuntu Node 20
+            os: ubuntu-latest
+            node-version: 20
+          - name: Windows Node 18
+            os: windows-latest
+            node-version: 18
+          - name: macOS Node 20
+            os: macos-latest
+            node-version: 20
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.config.node-version }}
+
+      - name: Run tests
+        run: npm test
+
+  # Job 4: Matrix with exclude
+  matrix-with-exclude:
+    name: Test ${{ matrix.os }} - Node ${{ matrix.node-version }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+        node-version: [16, 18, 20]
+        exclude:
+          # Exclude Node 16 on Windows
+          - os: windows-latest
+            node-version: 16
+          # Exclude Node 16 on macOS
+          - os: macos-latest
+            node-version: 16
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+
+      - name: Run tests
+        run: npm test
+
+  # Job 5: Matrix with include and exclude
+  matrix-advanced:
+    name: ${{ matrix.config.name }}
+    runs-on: ${{ matrix.config.os }}
+    strategy:
+      matrix:
+        config:
+          - name: Ubuntu Node 18
+            os: ubuntu-latest
+            node-version: 18
+          - name: Ubuntu Node 20
+            os: ubuntu-latest
+            node-version: 20
+          - name: Windows Node 18
+            os: windows-latest
+            node-version: 18
+        include:
+          # Add special configuration
+          - name: Ubuntu Node 20 with Coverage
+            os: ubuntu-latest
+            node-version: 20
+            coverage: true
+        exclude:
+          # Exclude if needed
+          - os: windows-latest
+            node-version: 18
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js ${{ matrix.config.node-version }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.config.node-version }}
+
+      - name: Run tests with coverage
+        if: matrix.config.coverage == true
+        run: npm run test:coverage
+
+      - name: Run tests
+        if: matrix.config.coverage != true
+        run: npm test
+
+  # Job 6: Matrix with fail-fast
+  matrix-fail-fast:
+    name: Test ${{ matrix.node-version }} (fail-fast)
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: true  # Stop all jobs if one fails
+      matrix:
+        node-version: [18, 20]
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+
+      - name: Run tests
+        run: npm test
+
+  # Job 7: Matrix with max-parallel
+  matrix-max-parallel:
+    name: Test ${{ matrix.node-version }} (max-parallel)
+    runs-on: ubuntu-latest
+    strategy:
+      max-parallel: 2  # Run maximum 2 jobs in parallel
+      matrix:
+        node-version: [16, 18, 20]
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+
+      - name: Run tests
+        run: npm test
+
+  # Job 8: Matrix with environment variables
+  matrix-with-env:
+    name: Test ${{ matrix.env.name }}
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        env:
+          - name: Development
+            NODE_ENV: development
+            DEBUG: true
+          - name: Production
+            NODE_ENV: production
+            DEBUG: false
+    env:
+      NODE_ENV: ${{ matrix.env.NODE_ENV }}
+      DEBUG: ${{ matrix.env.DEBUG }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+
+      - name: Print environment
+        run: |
+          echo "Environment: ${{ matrix.env.name }}"
+          echo "NODE_ENV: $NODE_ENV"
+          echo "DEBUG: $DEBUG"
+
+# Matrix Strategy Reference:
+# Basic Matrix:
+#   strategy:
+#     matrix:
+#       key: [value1, value2, value3]
+#
+# Multi-dimensional Matrix:
+#   strategy:
+#     matrix:
+#       os: [ubuntu-latest, windows-latest]
+#       node-version: [16, 18, 20]
+#
+# Include (add specific combinations):
+#   strategy:
+#     matrix:
+#       os: [ubuntu-latest]
+#       node-version: [18]
+#     include:
+#       - os: windows-latest
+#         node-version: 20
+#
+# Exclude (remove specific combinations):
+#   strategy:
+#     matrix:
+#       os: [ubuntu-latest, windows-latest]
+#       node-version: [16, 18, 20]
+#     exclude:
+#       - os: windows-latest
+#         node-version: 16
+#
+# fail-fast: Stop all jobs if one fails (default: true)
+# max-parallel: Maximum number of jobs to run in parallel
+#
+# Context Variables:
+#   - ${{ matrix.key }}: Access matrix values
+#   - ${{ strategy.job-index }}: Job index in matrix
+#   - ${{ strategy.job-total }}: Total jobs in matrix

@@ -1,0 +1,279 @@
+# GitHub Actions: Security & Permissions
+# This workflow demonstrates security best practices and permission management
+# Key concepts: least privilege, GITHUB_TOKEN permissions, third-party actions, secure defaults
+
+name: 10 - Security & Permissions
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+# Workflow-level permissions (least privilege)
+permissions:
+  contents: read
+  pull-requests: read
+
+jobs:
+  # Job 1: Minimal permissions
+  minimal-permissions:
+    name: Minimal Permissions
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Print permissions info
+        run: |
+          echo "=== Minimal Permissions ==="
+          echo "This job has read-only access to contents"
+          echo "Cannot write to repository"
+          echo "Cannot create pull requests"
+
+  # Job 2: Specific permissions for job
+  specific-permissions:
+    name: Specific Permissions
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+      issues: write
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Print specific permissions
+        run: |
+          echo "=== Specific Permissions ==="
+          echo "Read: contents"
+          echo "Write: pull-requests, issues"
+
+  # Job 3: GITHUB_TOKEN security
+  github-token-security:
+    name: GITHUB_TOKEN Security
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: GITHUB_TOKEN best practices
+        run: |
+          echo "=== GITHUB_TOKEN Best Practices ==="
+          echo "1. Use least privilege permissions"
+          echo "2. Scope permissions to what's needed"
+          echo "3. Never expose GITHUB_TOKEN in logs"
+          echo "4. Use environment variables for secrets"
+          echo "5. Rotate tokens regularly"
+          echo "6. Use separate tokens for different purposes"
+
+  # Job 4: Third-party action security
+  third-party-security:
+    name: Third-Party Action Security
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Use pinned action version
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+
+      - name: Print third-party security
+        run: |
+          echo "=== Third-Party Action Security ==="
+          echo "1. Pin action versions (use @v4, not @latest)"
+          echo "2. Review action source code"
+          echo "3. Use official GitHub actions"
+          echo "4. Check action permissions"
+          echo "5. Monitor action updates"
+          echo "6. Use commit SHA for pinning"
+
+  # Job 5: Dependency security
+  dependency-security:
+    name: Dependency Security
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+
+      - name: Check for vulnerabilities
+        run: |
+          echo "=== Dependency Security ==="
+          echo "npm audit checks for vulnerabilities"
+          npm audit --audit-level=moderate || true
+
+  # Job 6: Secret scanning
+  secret-scanning:
+    name: Secret Scanning
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Print secret scanning info
+        run: |
+          echo "=== Secret Scanning ==="
+          echo "GitHub automatically scans for secrets"
+          echo "Detects: API keys, tokens, credentials"
+          echo "Alerts: Repository owner and committer"
+          echo "Best practice: Enable secret scanning"
+
+  # Job 7: Code scanning
+  code-scanning:
+    name: Code Scanning
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      security-events: write
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Print code scanning info
+        run: |
+          echo "=== Code Scanning ==="
+          echo "CodeQL analyzes code for vulnerabilities"
+          echo "Detects: SQL injection, XSS, etc."
+          echo "Integrates with GitHub security tab"
+          echo "Can block PRs on findings"
+
+  # Job 8: Secure environment variables
+  secure-env-vars:
+    name: Secure Environment Variables
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Use environment variables securely
+        env:
+          SENSITIVE_DATA: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          echo "=== Secure Environment Variables ==="
+          echo "1. Use secrets for sensitive data"
+          echo "2. Never log secrets"
+          echo "3. Use environment variables"
+          echo "4. GitHub masks secrets in logs"
+          echo "5. Secrets are encrypted at rest"
+
+  # Job 9: Audit logging
+  audit-logging:
+    name: Audit Logging
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Print audit logging info
+        run: |
+          echo "=== Audit Logging ==="
+          echo "GitHub logs all workflow executions"
+          echo "Tracks: who, what, when, where"
+          echo "Available in: Settings > Audit log"
+          echo "Useful for: Compliance, debugging"
+
+  # Job 10: Security best practices summary
+  security-summary:
+    name: Security Best Practices
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Print security summary
+        run: |
+          echo "=== Security Best Practices ==="
+          echo ""
+          echo "Permissions:"
+          echo "  - Use least privilege principle"
+          echo "  - Scope permissions to what's needed"
+          echo "  - Review job permissions"
+          echo ""
+          echo "Secrets:"
+          echo "  - Use GitHub secrets for sensitive data"
+          echo "  - Never log secrets"
+          echo "  - Rotate secrets regularly"
+          echo ""
+          echo "Actions:"
+          echo "  - Pin action versions"
+          echo "  - Review action source code"
+          echo "  - Use official GitHub actions"
+          echo ""
+          echo "Dependencies:"
+          echo "  - Run npm audit"
+          echo "  - Keep dependencies updated"
+          echo "  - Monitor for vulnerabilities"
+          echo ""
+          echo "Code:"
+          echo "  - Enable code scanning"
+          echo "  - Enable secret scanning"
+          echo "  - Review security alerts"
+          echo ""
+          echo "Monitoring:"
+          echo "  - Check audit logs"
+          echo "  - Monitor workflow runs"
+          echo "  - Review failed workflows"
+
+# Security & Permissions Reference:
+# Permission Scopes:
+#   - actions: Manage GitHub Actions
+#   - checks: Read/write checks
+#   - contents: Read/write repository contents
+#   - deployments: Manage deployments
+#   - id-token: Use OIDC token
+#   - issues: Manage issues
+#   - packages: Manage packages
+#   - pages: Manage GitHub Pages
+#   - pull-requests: Manage pull requests
+#   - repository-projects: Manage projects
+#   - security-events: Manage security events
+#   - statuses: Manage commit statuses
+#
+# Permission Levels:
+#   - read: Read-only access
+#   - write: Read and write access
+#   - admin: Full administrative access
+#
+# Best Practices:
+#   1. Use least privilege principle
+#   2. Scope permissions to what's needed
+#   3. Pin action versions (use @v4, not @latest)
+#   4. Review third-party actions
+#   5. Use official GitHub actions
+#   6. Enable secret scanning
+#   7. Enable code scanning
+#   8. Monitor audit logs
+#   9. Rotate secrets regularly
+#   10. Keep dependencies updated
+#
+# Security Features:
+#   - Secret scanning: Detects exposed secrets
+#   - Code scanning: Analyzes code for vulnerabilities
+#   - Dependency scanning: Checks for vulnerable dependencies
+#   - Audit logging: Tracks all actions
+#   - OIDC tokens: Secure authentication
+#   - Environment protection: Approval requirements
