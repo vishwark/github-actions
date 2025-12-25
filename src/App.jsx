@@ -10,6 +10,8 @@ function App() {
       'Node Environment': process.env.NODE_ENV || 'Not set',
       'Vite Mode': import.meta.env.MODE || 'Not set',
       'Base URL': import.meta.env.BASE_URL || '/',
+      'API Endpoint': window.__API_ENDPOINT__ || 'Not configured',
+      'Environment': window.__ENVIRONMENT__ || 'development',
       'Browser User Agent': navigator.userAgent,
       'Current URL': window.location.href,
       'Hostname': window.location.hostname,

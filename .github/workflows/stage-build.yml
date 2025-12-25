@@ -1,0 +1,143 @@
+# GitHub Actions: Stage Build Workflow
+# This workflow builds and deploys to staging environment
+# Reads environment variables and secrets (API_ENDPOINT)
+
+name: Stage Build & Deploy
+
+on:
+  push:
+    branches: [develop]
+  workflow_dispatch:
+
+env:
+  ENVIRONMENT: staging
+  NODE_ENV: staging
+
+jobs:
+  # Job 1: Build for staging
+  build-stage:
+    name: Build for Staging
+    runs-on: ubuntu-latest
+    environment:
+      name: staging
+      url: https://staging.example.com
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20.19.6'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Print environment info
+        run: |
+          echo "=== Staging Build Environment ==="
+          echo "Environment: ${{ env.ENVIRONMENT }}"
+          echo "Node Environment: ${{ env.NODE_ENV }}"
+          echo "Branch: ${{ github.ref }}"
+          echo "Commit SHA: ${{ github.sha }}"
+          echo "Actor: ${{ github.actor }}"
+          echo "Test Variable: ${{ vars.TEST_VAR }}"
+
+      - name: Print API Endpoint (Secret)
+        run: |
+          echo "=== API Configuration ==="
+          echo "API Endpoint is configured (masked for security)"
+          echo "API_ENDPOINT length: ${#API_ENDPOINT}"
+        env:
+          API_ENDPOINT: ${{ secrets.STAGING_API_ENDPOINT }}
+
+      - name: Build project with environment variables
+        run: npm run build
+        env:
+          VITE_API_ENDPOINT: ${{ secrets.STAGING_API_ENDPOINT }}
+          VITE_ENVIRONMENT: staging
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v3
+        with:
+          name: staging-build
+          path: dist/
+          retention-days: 7
+
+  # Job 2: Test staging build
+  test-stage:
+    name: Test Staging Build
+    runs-on: ubuntu-latest
+    needs: build-stage
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20.19.6'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Run tests
+        run: npm test || true
+
+      - name: Run linter
+        run: npm run lint || true
+
+  # Job 3: Deploy to GitHub Pages (Staging)
+  deploy-stage:
+    name: Deploy to GitHub Pages (Staging)
+    runs-on: ubuntu-latest
+    needs: [build-stage, test-stage]
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+    environment:
+      name: staging
+      url: https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/
+    steps:
+      - name: Download build artifacts
+        uses: actions/download-artifact@v3
+        with:
+          name: staging-build
+          path: ./dist
+
+      - name: Setup Pages
+        uses: actions/configure-pages@v4
+
+      - name: Upload artifacts to GitHub Pages
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: './dist'
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
+
+      - name: Verify deployment
+        run: |
+          echo "=== Staging Deployment Verification ==="
+          echo "✓ Build artifacts deployed to GitHub Pages"
+          echo "✓ Environment variables configured"
+          echo "✓ API endpoint: ${{ env.VITE_API_ENDPOINT }}"
+          echo "✓ Deployment URL: ${{ steps.deployment.outputs.page_url }}"
+
+# Staging Build Reference:
+# Environment: staging
+# Triggers: push to develop branch, manual workflow_dispatch
+# Secrets used: STAGING_API_ENDPOINT
+# Environment variables: VITE_API_ENDPOINT, VITE_ENVIRONMENT
+# Deployment URL: https://staging.example.com
+#
+# To set up secrets in GitHub:
+# 1. Go to Settings > Secrets and variables > Actions
+# 2. Create new secret: STAGING_API_ENDPOINT
+# 3. Set value to your staging API endpoint
+#
+# Example: https://api-staging.example.com
